@@ -86,7 +86,7 @@ void* mandelbrot_kernel(void* args)
 				{
 					Z = Z * Z + C;
 					k++;
-				} while (cabs(Z) < 2 && k < sd->max_iter);
+				} while ((creal(Z)*creal(Z) + cimag(Z)*cimag(Z)) < 4 && k < sd->max_iter);// while (cabs(Z) < 2 && k < sd->max_iter);
 
 				if (k == sd->max_iter)
 				{
@@ -150,5 +150,6 @@ void mandelbrot_draw(int x_resolution, int y_resolution, int max_iter,
 	// Cleanup
 	free(threads);
 	free(args);
+	free(staticData);
 	free(taskCounterMutex);
 }
