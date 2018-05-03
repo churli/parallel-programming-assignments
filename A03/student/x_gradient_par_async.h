@@ -20,15 +20,15 @@ void x_gradient(const SrcView& src, const DstView& dst, int num_threads) {
 	auto W = src.width();
 	std::cout << "Image is of size: " << W << "x" << H << std::endl;
 	
-	int stride = 6; // Rows per thread, this must divide H
-	std::future<void>* futureSet = 
-		(std::future<void>*) calloc(H/stride, sizeof(std::future<void>));
+	int stride = 6; // Rows per thread
+	std::future<void>** futureSet = 
+		(std::future<void>**) calloc((H/stride)+1, sizeof(std::future<void>*));
 
 	int n = 0; // Thread num
     for (int y = 0; y < H; y+=stride, ++n)
     {
     	std::cout << n << std::endl;
-    	futureSet[n] = std::async(std::launch::async, 
+    	*(futureSet[n]) = std::async(std::launch::async, 
             [&, y]{
 		        int lim = y+stride;
             	for (int j=y; j<lim && j<H; ++j)
@@ -47,11 +47,12 @@ void x_gradient(const SrcView& src, const DstView& dst, int num_threads) {
     		}
     	);
     }
+    futureSet[n] = NULL; // Ensure stop in next iteration
 
-    for (int i=0; i<(H/stride); ++i)
+    for (int i=0; i<H && futureSet[i]!=NULL; ++i)
     {
     	std::cout << "Waiting for thread: " << i << std::endl;
-    	futureSet[i].wait();
+    	futureSet[i]->wait();
     }
 
     free(futureSet);

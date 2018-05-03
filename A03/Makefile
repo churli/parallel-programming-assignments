@@ -1,6 +1,6 @@
 NAME = x_gradient
 CC = g++
-CXXFLAGS = -std=c++11 -fopenmp -fstrict-overflow -Werror -Wshadow -Wstrict-overflow=5 -pedantic
+CXXFLAGS = -std=c++11 -fopenmp -fstrict-overflow -Werror -Wshadow -Wstrict-overflow=5 -pedantic -ggdb
 LDFLAGS = -lm -ljpeg -I $(CURDIR) 
 
 #error if student directory is not set

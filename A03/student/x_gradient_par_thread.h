@@ -5,6 +5,7 @@
 #include <omp.h>
 #include"x_gradient.h"
 
+#include <thread>
 #include <future>
 
 using namespace boost::gil;
@@ -20,17 +21,16 @@ void x_gradient(const SrcView& src, const DstView& dst, int num_threads) {
 	auto W = src.width();
 	std::cout << "Image is of size: " << W << "x" << H << std::endl;
 	
-	int stride = 6; // Rows per thread, this must divide H
-	std::future<void>* futureSet = 
-		(std::future<void>*) calloc(H/stride, sizeof(std::future<void>));
+	std::thread** threadSet = 
+		(std::thread**) calloc(H, sizeof(std::thread*));
 
+	int stride = 6; // Rows per thread
 	int n = 0; // Thread num
     for (int y = 0; y < H; y+=stride, ++n)
     {
-    	std::cout << n << std::endl;
-    	futureSet[n] = std::async(std::launch::async, 
+		threadSet[n] = new std::thread(
             [&, y]{
-		        int lim = y+stride;
+            	int lim = y+stride;
             	for (int j=y; j<lim && j<H; ++j)
             	{
 			        typename SrcView::x_iterator src_it = src.row_begin(j);
@@ -48,13 +48,13 @@ void x_gradient(const SrcView& src, const DstView& dst, int num_threads) {
     	);
     }
 
-    for (int i=0; i<(H/stride); ++i)
+    for (int i=0; i<H && threadSet[i]!=NULL; ++i)
     {
-    	std::cout << "Waiting for thread: " << i << std::endl;
-    	futureSet[i].wait();
+		threadSet[i]->join();
+		delete threadSet[i];
     }
 
-    free(futureSet);
+    free(threadSet);
 
 }
 
