@@ -26,6 +26,7 @@ template <typename SrcView, typename DstView>
 void x_luminosity_gradient(const SrcView& src, const DstView& dst, int num_threads) {
     typedef pixel<typename channel_type<SrcView>::type, gray_layout_t> gray_pixel_t;
     x_gradient(color_converted_view<gray_pixel_t>(src), dst, num_threads);
+    // x_gradient(src, dst, num_threads);
 }
 
 #endif // !_X_GRADIENT_
