@@ -26,11 +26,22 @@ int main(int argc, char **argv)
 	double x_stepsize;
 	double y_stepsize;
 
+	char batchMode = 0;
+    int numTrials = 1;
+
 	int c;
-	while ((c = getopt(argc, argv, "t:p:i:r:v:n:f:")) != -1)
+	while ((c = getopt(argc, argv, "A:t:p:i:r:v:n:f:")) != -1)
 	{
 		switch (c)
 		{
+		case 'A':
+                batchMode = 1;
+                if (sscanf(optarg, "%d", &numTrials) != 1)
+                {
+                    goto error;
+                }
+                break;
+
 		case 't':
 			if (sscanf(optarg, "%d", &num_threads) != 1)
 				goto error;
@@ -67,6 +78,7 @@ int main(int argc, char **argv)
 		case '?':
 error: printf(
 			    "Usage:\n"
+			    "-A \t num of trials to average\n"
 			    "-t \t number of threads used in computation\n"
 			    "-i \t maximum number of iterations per pixel\n"
 			    "-r \t image resolution to be computed\n"
@@ -86,62 +98,86 @@ error: printf(
 	x_stepsize = (view_x1 - view_x0) / x_resolution;
 	y_stepsize = (view_y1 - view_y0) / y_resolution;
 
-	printf("Following settings are used for computation:\n"
-	       "Threads: %d\n"
-	       "Max. iterations: %d\n"
-	       "Resolution: %dx%d\n"
-	       "View frame: [%lf,%lf]x[%lf,%lf]\n"
-	       "Stepsize x = %lf y = %lf\n", num_threads, max_iter, x_resolution,
-	       y_resolution, view_x0, view_x1, view_y0, view_y1, x_stepsize,
-	       y_stepsize);
-	
-	if (!no_output)
-		printf("Output file: %s\n", file_name); 
-	else
-		printf("No output will be writen\n");
-
-	FILE* file;
-	if (!no_output) {
-		if ((file = fopen(file_name, "w")) == NULL )
-		{
-			perror("fopen");
-			exit(EXIT_FAILURE);
-		}
-	}
-
-	unsigned char (*image)[x_resolution][3];
-	image = malloc(x_resolution * y_resolution * sizeof(char[3]));
-
-	if (image == NULL )
-	{
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
+	if (batchMode)
+        stderr = fopen("/dev/null","w");
+    
+    fprintf(stderr, "Following settings are used for computation:\n"
+           "Threads: %d\n"
+           "Max. iterations: %d\n"
+           "Resolution: %dx%d\n"
+           "View frame: [%lf,%lf]x[%lf,%lf]\n"
+           "Stepsize x = %lf y = %lf\n", num_threads, max_iter, x_resolution,
+           y_resolution, view_x0, view_x1, view_y0, view_y1, x_stepsize,
+           y_stepsize);
+    
+    if (!no_output)
+    {
+        fprintf(stderr, "Output file: %s\n", file_name);
+    }
+    else
+    {
+        fprintf(stderr, "No output will be writen\n");
+    }
+    
+    FILE *file = NULL;
+    if (!no_output)
+    {
+        if ((file = fopen(file_name, "w")) == NULL)
+        {
+            perror("fopen");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    unsigned char (*image)[x_resolution][3];
+    image = (unsigned char (*)[x_resolution][3]) (malloc(x_resolution * y_resolution * sizeof(char[3])));
+    
+    if (image == NULL)
+    {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
 
 	// compute mandelbrot	
 	clock_gettime(CLOCK_MONOTONIC, &begin);
-	mandelbrot_draw(x_resolution, y_resolution, max_iter, view_x0, view_x1, view_y0, view_y1, x_stepsize, y_stepsize, palette_shift, image, num_threads);
-	clock_gettime(CLOCK_MONOTONIC, &end);
-
-	if (!no_output) {
-		if (fprintf(file, "P6\n%d %d %d\n", x_resolution, y_resolution, 255) < 0)
-		{
-			perror("fprintf");
-			exit(EXIT_FAILURE);
-		}
-		size_t bytes_written = fwrite(image, 1,
-	                              x_resolution * y_resolution * sizeof(char[3]), file);
-		if (bytes_written < x_resolution * y_resolution * sizeof(char[3]))
-		{
-			perror("fwrite");
-			exit(EXIT_FAILURE);
-		}
-		fclose(file);
+	for (int trial=0; trial<numTrials; ++trial)
+    {
+		mandelbrot_draw(x_resolution, y_resolution, max_iter, view_x0, view_x1, view_y0, view_y1, x_stepsize, y_stepsize, palette_shift, image, num_threads);
 	}
-
-	printf("\n\nTime: %.5f seconds\n", ((double)end.tv_sec + 1.0e-9*end.tv_nsec) -
-									   ((double)begin.tv_sec + 1.0e-9*begin.tv_nsec));
-
-	free(image);
-	return 0;
+	clock_gettime(CLOCK_MONOTONIC, &end);
+    
+    if (!no_output)
+    {
+        if (fprintf(file, "P6\n%d %d %d\n", x_resolution, y_resolution, 255) < 0)
+        {
+            perror("fprintf");
+            exit(EXIT_FAILURE);
+        }
+        size_t bytes_written = fwrite(image, 1,
+                                      x_resolution * y_resolution * sizeof(char[3]), file);
+        if (bytes_written < x_resolution * y_resolution * sizeof(char[3]))
+        {
+            perror("fwrite");
+            exit(EXIT_FAILURE);
+        }
+        fclose(file);
+    }
+    
+    fprintf(stderr, "\n\n");
+    double execTimeGlobalSec = ((double) end.tv_sec + 1.0e-9 * end.tv_nsec) -
+                         ((double) begin.tv_sec + 1.0e-9 * begin.tv_nsec);
+    double execTimeAvgSec = execTimeGlobalSec/numTrials;
+    if (batchMode)
+        printf("xresolution,%d,yresolution,%d,threads,%d,averagingTrials,%d,timeGlobal[s],%.5f,timeAvg[s],%.5f\n",
+               x_resolution,
+               y_resolution,
+               num_threads,
+               numTrials,
+               execTimeGlobalSec,
+               execTimeAvgSec);
+    else
+        printf("Time: %.5f seconds\n", execTimeGlobalSec);
+    
+    free(image);
+    return 0;
 }
