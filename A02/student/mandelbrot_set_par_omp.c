@@ -12,20 +12,19 @@ void mandelbrot_draw(int x_resolution, int y_resolution, int max_iter,
                      double x_stepsize, double y_stepsize,
                      int palette_shift, unsigned char (*img)[x_resolution][3],
 							int num_threads) {
-	double y;
-	double x;
-
-	complex double Z;
-	complex double C;
-
-	int k;
 
 	omp_set_num_threads(num_threads);
 
 	#pragma omp parallel for schedule(dynamic,1)
-	// #pragma omp parallel for schedule(guided)
 	for (int i = 0; i < y_resolution; i++)
 	{
+		double y;
+		double x;
+
+		complex double Z;
+		complex double C;
+
+		int k;
 		for (int j = 0; j < x_resolution; j++)
 		{
 			y = view_y1 - i * y_stepsize;
