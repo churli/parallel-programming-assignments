@@ -57,8 +57,8 @@ int main(int argc, char **argv)
 
   MPI_Barrier(comm);
   if (rank==0) printf("\nTime: %.3lf seconds\n", t);
-  free(h_old);
-  free(h_new);
+  // free(h_old);
+  // free(h_new);
 
   MPI_Finalize();
 

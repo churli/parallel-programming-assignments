@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   if (rank == 0){
       double *h_old_seq = NULL;
       double *h_new_seq = NULL;
-      heat_ref = jacobi_ref(h_new_seq, h_old_seq, niters, energy_intensity, n, iter_energy, nsources, sources, rank, size, px, py, comm, output);
+      heat_ref = jacobi_ref(h_new_seq, h_old_seq, niters, energy_intensity, n, iter_energy, nsources, sources, rank+666, size, px, py, comm, output);
   }
 
   MPI_Barrier(comm);
@@ -66,6 +66,7 @@ int main(int argc, char **argv)
 
   if(rank==0)
       if ( (heat-heat_ref) >0.00001){
+          printf("Tolerance on output exceeded!\nheat = %f\nheat_ref = %f\n", heat, heat_ref);
           MPI_Abort(comm,1);
       }
 
