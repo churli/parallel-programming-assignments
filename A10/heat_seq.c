@@ -4,7 +4,9 @@
 #include "heat.h"
 #include "helper.h"
 
-double jacobi(double *h_new, double *h_old, int niters, int energy_intensity, int n, int iter_energy,  const int nsources, int sources[nsources][2], int rank, int size, int px, int py, MPI_Comm comm, int output)
+double jacobi(double *h_new, double *h_old, int niters, int energy_intensity, 
+              int n, int iter_energy,  const int nsources, int sources[nsources][2], 
+              int rank, int size, int px, int py, MPI_Comm comm, int output)
 {
     h_old = (double *)calloc(1, (n + 2) * (n + 2) * sizeof(double)); // extended with halos of width 1
     h_new = (double *)calloc(1, (n + 2) * (n + 2) * sizeof(double)); // extended with halos of width 1

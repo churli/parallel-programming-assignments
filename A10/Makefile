@@ -10,6 +10,7 @@ endif
 
 #Compiler flags
 #if mode variable is empty, setting release build mode
+# mode = debug
 ifeq ($(mode),debug)
 	CFLAGS += -ggdb
 else

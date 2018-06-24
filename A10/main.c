@@ -55,7 +55,10 @@ int main(int argc, char **argv)
   jacobi(h_new, h_old, niters, energy_intensity, n, iter_energy, nsources, sources, rank, size, px, py, comm, output);
   t += MPI_Wtime();
 
-  if (rank==0) printf("\nTime: %.3lf seconds\n", t); 
+  MPI_Barrier(comm);
+  if (rank==0) printf("\nTime: %.3lf seconds\n", t);
+  free(h_old);
+  free(h_new);
 
   MPI_Finalize();
 
