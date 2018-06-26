@@ -55,16 +55,67 @@ double jacobi(double *h_new, double *h_old, int niters, int energy_intensity,
     int localRowRangeEnd = numRows*(pI+1);
 
     double *tmp;
-    for (int iter = 0; iter < niters; ++iter)
+    int commuStride = 10;
+    for (int iter = 0; iter < niters; iter+=commuStride)
     {
-        for (int j = 1; j < numRows + 1; ++j)
+        // Launching the non-blocking receive operations
+        MPI_Irecv(h_new+map(1,0,numColumns+2), numColumns, MPI_DOUBLE, top, MPI_ANY_TAG, comm, reqRecv+TOP); //Top
+        MPI_Irecv(h_new+map(1,numRows+1,numColumns+2), numColumns, MPI_DOUBLE, bot, MPI_ANY_TAG, comm, reqRecv+BOTTOM); //Bottom
+        MPI_Irecv(h_new+map(0,1,numColumns+2), 1, column, left, MPI_ANY_TAG, comm, reqRecv+LEFT); //Left
+        MPI_Irecv(h_new+map(numColumns+1,1,numColumns+2), 1, column, right, MPI_ANY_TAG, comm, reqRecv+RIGHT); //Right
+        //
+        int locIterTarget = iter + commuStride - 1;
+        // for (int locIter = 0; locIter < locIterTarget ; ++locIter)
+        // {
+        //     for (int j = 1; j < numRows + 1; ++j)
+        //     {
+        //         for (int i = 1; i < numColumns + 1; ++i)
+        //         {
+        //             h_new[map(i, j ,numColumns+2)] = h_old[map(i, j, numColumns+2)] / 2.0 + (h_old[map(i - 1, j, numColumns+2)] + h_old[map(i + 1, j, numColumns+2)] + h_old[map(i, j - 1, numColumns+2)] + h_old[map(i, j + 1, numColumns+2)]) / 4.0 / 2.0;
+        //         }
+        //     }
+        //     if (iter+locIter < iter_energy)
+        //     {
+        //         for (int i = 0; i < nsources; ++i)
+        //         {
+        //             int row = sources[i][1];
+        //             int col = sources[i][0];
+        //             if (localRowRangeStart <= row && row < localRowRangeEnd 
+        //                 && localColRangeStart <= col && col < localColRangeEnd)
+        //             {
+        //                 row = row % numRows;
+        //                 col = col % numColumns;
+        //                 h_new[map(col, row, numColumns+2)] += energy_intensity; // heat rate
+        //             }
+        //         }
+        //     }
+        //     tmp = h_new; // swap arrays
+        //     h_new = h_old;
+        //     h_old = tmp;
+        // }
+
+        for (int i = 1; i < numColumns + 1; ++i)
+        {
+            int j = 1;
+            h_new[map(i, j ,numColumns+2)] = h_old[map(i, j, numColumns+2)] / 2.0 + (h_old[map(i - 1, j, numColumns+2)] + h_old[map(i + 1, j, numColumns+2)] + h_old[map(i, j - 1, numColumns+2)] + h_old[map(i, j + 1, numColumns+2)]) / 4.0 / 2.0;
+        }
+        MPI_Isend(h_new+map(1,1,numColumns+2), numColumns, MPI_DOUBLE, top, 0, comm, reqSend+TOP); //Top
+        for (int j = 2; j < numRows; ++j)
         {
             for (int i = 1; i < numColumns + 1; ++i)
             {
                 h_new[map(i, j ,numColumns+2)] = h_old[map(i, j, numColumns+2)] / 2.0 + (h_old[map(i - 1, j, numColumns+2)] + h_old[map(i + 1, j, numColumns+2)] + h_old[map(i, j - 1, numColumns+2)] + h_old[map(i, j + 1, numColumns+2)]) / 4.0 / 2.0;
             }
         }
-        if (iter < iter_energy)
+        MPI_Isend(h_new+map(1,1,numColumns+2), 1, column, left, 0, comm, reqSend+LEFT); //Left
+        MPI_Isend(h_new+map(numColumns,1,numColumns+2), 1, column, right, 0, comm, reqSend+RIGHT); //Right
+        for (int i = 1; i < numColumns + 1; ++i)
+        {
+            int j = numRows;
+            h_new[map(i, j ,numColumns+2)] = h_old[map(i, j, numColumns+2)] / 2.0 + (h_old[map(i - 1, j, numColumns+2)] + h_old[map(i + 1, j, numColumns+2)] + h_old[map(i, j - 1, numColumns+2)] + h_old[map(i, j + 1, numColumns+2)]) / 4.0 / 2.0;
+        }
+        MPI_Isend(h_new+map(1,numRows,numColumns+2), numColumns, MPI_DOUBLE, bot, 0, comm, reqSend+BOTTOM); //Bottom
+        if (iter+locIterTarget < iter_energy)
         {
             for (int i = 0; i < nsources; ++i)
             {
@@ -79,15 +130,6 @@ double jacobi(double *h_new, double *h_old, int niters, int energy_intensity,
                 }
             }
         }
-        MPI_Isend(h_new+map(1,1,numColumns+2), numColumns, MPI_DOUBLE, top, 0, comm, reqSend+TOP); //Top
-        MPI_Isend(h_new+map(1,numRows,numColumns+2), numColumns, MPI_DOUBLE, bot, 0, comm, reqSend+BOTTOM); //Bottom
-        MPI_Isend(h_new+map(1,1,numColumns+2), 1, column, left, 0, comm, reqSend+LEFT); //Left
-        MPI_Isend(h_new+map(numColumns,1,numColumns+2), 1, column, right, 0, comm, reqSend+RIGHT); //Right
-        //
-        MPI_Irecv(h_new+map(1,0,numColumns+2), numColumns, MPI_DOUBLE, top, MPI_ANY_TAG, comm, reqRecv+TOP); //Top
-        MPI_Irecv(h_new+map(1,numRows+1,numColumns+2), numColumns, MPI_DOUBLE, bot, MPI_ANY_TAG, comm, reqRecv+BOTTOM); //Bottom
-        MPI_Irecv(h_new+map(0,1,numColumns+2), 1, column, left, MPI_ANY_TAG, comm, reqRecv+LEFT); //Left
-        MPI_Irecv(h_new+map(numColumns+1,1,numColumns+2), 1, column, right, MPI_ANY_TAG, comm, reqRecv+RIGHT); //Right
         //
         MPI_Waitall(4, reqSend, statusSend);
         MPI_Waitall(4, reqRecv, statusRecv);
