@@ -14,7 +14,7 @@ DO_MPI = ON
 ### own.  If you need any -L or -l switches to get C standard libraries
 ### (such as -lm for the math library) put them in C_LIB.
 CC = mpicc
-CFLAGS = -std=c99
+CFLAGS = -std=c99 -g
 OPTFLAGS = -g -O5
 INCLUDES = 
 C_LIB = -lm
@@ -26,7 +26,7 @@ MPI_INCLUDE =
 
 ### A place to specify any other include or library switches your
 ### platform requires.
-OTHER_LIB =
+OTHER_LIB = -lrt -L ~/ExternalRepo/mpiP -lmpiP -ldl -lunwind
 OTHER_INCLUDE =
 
 # clear all suffixes
@@ -74,6 +74,12 @@ CoMD_info.h: Makefile
 
 ${BIN_DIR}:
 	@if [ ! -d ${BIN_DIR} ]; then mkdir -p ${BIN_DIR} ; fi
+
+runmpiPprofiling:
+	LD_LIBRARY_PATH=~/ExternalRepo/mpiP/ MPIP='-k 0' mpirun -np 16 ./bin/CoMD-mpi -i 4 -j 2 -k 2 -x 40 -y 40 -z 40
+
+cleanmpiPoutfiles:
+	rm *.mpiP
 
 clean:
 	rm -f *.o CoMD_info.h
