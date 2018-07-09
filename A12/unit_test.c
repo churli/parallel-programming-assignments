@@ -32,9 +32,21 @@ int main(int argc, char **argv)
         num_threads=atoi(argv[7]); // 2nd dim process topolgy
         output=atoi(argv[8]); // output flag
 
-        if(px * py != size) MPI_Abort(comm, 1);// abort if px or py are wrong
-        if(n % py != 0) MPI_Abort(comm, 2); // abort; px needs to divide n
-        if(n % px != 0) MPI_Abort(comm, 3); // abort; py needs to divide n
+        if(px * py != size) 
+        {
+            printf("Wrong size, px, py!\tsize = %d, px = %d, py = %d\n", size, px, py);
+            MPI_Abort(comm, 1);// abort if px or py are wrong
+        }
+        if(n % py != 0) 
+        {
+            printf("n != 0  mod py!\tn = %d, py = %d\n", n, py);
+            MPI_Abort(comm, 2); // abort; px needs to divide n
+        }
+        if(n % px != 0) 
+        {
+            printf("n != 0  mod px!\tn = %d, px = %d\n", n, px);
+            MPI_Abort(comm, 3); // abort; py needs to divide n
+        }
 
         // broadcast arguments
         int args[8] = {n, energy_intensity, niters, iter_energy, px, py, num_threads, output};
@@ -60,13 +72,16 @@ int main(int argc, char **argv)
     MPI_Barrier(comm);
     double *h_old_par = NULL;
     double *h_new_par = NULL;
-    double heat_partial = jacobi(h_new_par, h_old_par, niters, energy_intensity, n, iter_energy, nsources, sources, rank, size, px, py, num_threads, comm, output);
+    double heat_partial = jacobi(h_new_par, h_old_par, niters, energy_intensity, 
+        n, iter_energy, nsources, sources, 
+        rank, size, px, py, num_threads, comm, output);
 
     double heat;
     MPI_Reduce(&heat_partial,&heat,1,MPI_DOUBLE,MPI_SUM,0,comm);
 
     if(rank==0)
         if ( (heat-heat_ref) >0.00001){
+            printf("Tolerance on output exceeded!\nheat = %f\nheat_ref = %f\n", heat, heat_ref);
             MPI_Abort(comm,1);
         }
 

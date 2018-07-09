@@ -1,6 +1,6 @@
 NAME = heat
 CC = mpicc
-CFLAGS = -std=gnu99 -fopenmp -fstrict-overflow -Wall -Wshadow -pedantic
+CFLAGS = -std=gnu99 -fopenmp -fstrict-overflow -Wall -Wshadow -pedantic -ggdb
 LDFLAGS = -lm -lrt -I $(CURDIR)
 
 #error if student directory is not set
